@@ -57,11 +57,11 @@ export type MemoryQmdLimitsConfig = {
  */
 export type EmpireMemoryLayerConfig = {
   knowledge: string;  // Layer 1: Facts, entities
-  daily: string;      // Layer 2: Daily logs
+  daily: string;      // Layer 2: Daily logs  
   tacit: string;      // Layer 3: Agent wisdom
 };
 
 export type EmpireMemoryConfig = {
-  layers: EmpireMemoryLayerConfig;
+  layers?: EmpireMemoryLayerConfig;
   license?: string;  // For premium validation
 };

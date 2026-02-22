@@ -374,6 +374,21 @@ export type MemorySearchConfig = {
     /** Optional cap on cached embeddings (best-effort). */
     maxEntries?: number;
   };
+  /** Memory backend selection (builtin, qmd, or empire). */
+  backend?: "builtin" | "qmd" | "empire";
+  /** Citations mode for memory results. */
+  citations?: "auto" | "on" | "off";
+  /** Empire 3-layer memory backend configuration. */
+  empire?: {
+    layers: {
+      knowledge: string;
+      daily: string;
+      tacit: string;
+    };
+    license?: string;
+  };
+  /** QMD (queryable markdown) backend configuration. */
+  qmd?: import("./types.memory.js").MemoryQmdConfig;
 };
 
 export type ToolsConfig = {

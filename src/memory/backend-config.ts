@@ -265,17 +265,21 @@ export function resolveMemoryBackendConfig(params: {
   cfg: OpenClawConfig;
   agentId: string;
 }): ResolvedMemoryBackendConfig {
-  const backend = params.cfg.memory?.backend ?? DEFAULT_BACKEND;
-  const citations = params.cfg.memory?.citations ?? DEFAULT_CITATIONS;
+  // Read from agent defaults config (correct path!)
+  const memorySearchCfg = params.cfg.agents?.defaults?.memorySearch;
+  
+  const backend = memorySearchCfg?.backend ?? DEFAULT_BACKEND;
+  const citations = memorySearchCfg?.citations ?? DEFAULT_CITATIONS;
+  
   if (backend === "empire") {
-    return { backend: "empire", citations, empire: params.cfg.memory?.empire };
+    return { backend: "empire", citations, empire: memorySearchCfg?.empire };
   }
   if (backend !== "qmd") {
     return { backend: "builtin", citations };
   }
 
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, params.agentId);
-  const qmdCfg = params.cfg.memory?.qmd;
+  const qmdCfg = memorySearchCfg?.qmd;
   const includeDefaultMemory = qmdCfg?.includeDefaultMemory !== false;
   const nameSet = new Set<string>();
   const collections = [
