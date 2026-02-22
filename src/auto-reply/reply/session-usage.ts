@@ -83,12 +83,18 @@ export async function persistSessionUsageUpdate(params: {
                 promptTokens: params.promptTokens,
               })
             : undefined;
+          // Fallback: if no prompt snapshot but we have usage, estimate total
+          const estimatedTotal = typeof totalTokens !== "number" && typeof input === "number" && typeof output === "number"
+            ? input + output
+            : totalTokens;
+          
           const patch: Partial<SessionEntry> = {
             inputTokens: input,
             outputTokens: output,
             // Missing a last-call snapshot means context utilization is stale/unknown.
-            totalTokens,
-            totalTokensFresh: typeof totalTokens === "number",
+            totalTokens: estimatedTotal,
+            // Fix: Consider tokens fresh if we have ANY valid data
+            totalTokensFresh: typeof estimatedTotal === "number" && estimatedTotal > 0,
             modelProvider: params.providerUsed ?? entry.modelProvider,
             model: params.modelUsed ?? entry.model,
             contextTokens: resolvedContextTokens,

@@ -22,6 +22,26 @@ export async function getMemorySearchManager(params: {
   purpose?: "default" | "status";
 }): Promise<MemorySearchManagerResult> {
   const resolved = resolveMemoryBackendConfig(params);
+  
+  // Handle Empire backend
+  if (resolved.backend === "empire") {
+    try {
+      const { getBackend } = await import("./backends/registry.js");
+      const backend = await getBackend({ 
+        type: "empire",
+        layers: resolved.empire?.layers || {
+          knowledge: "/home/waikai/.openclaw/life/empire",
+          daily: "/home/waikai/.openclaw/life/sessions",
+          tacit: "/home/waikai/.openclaw/life/agents"
+        }
+      });
+      return { manager: new EmpireMemoryManagerWrapper(backend) };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.warn(`empire memory unavailable; falling back to builtin: ${message}`);
+    }
+  }
+  
   if (resolved.backend === "qmd" && resolved.qmd) {
     const statusOnly = params.purpose === "status";
     const cacheKey = buildQmdCacheKey(params.agentId, resolved.qmd);
@@ -109,13 +129,13 @@ class FallbackMemoryManager implements MemorySearchManager {
     throw new Error(this.lastError ?? "memory search unavailable");
   }
 
-  async readFile(params: { relPath: string; from?: number; lines?: number }) {
+  async readFile(_params: { relPath: string; from?: number; lines?: number }) {
     if (!this.primaryFailed) {
-      return await this.deps.primary.readFile(params);
+      return await this.deps.primary.readFile(_params);
     }
     const fallback = await this.ensureFallback();
     if (fallback) {
-      return await fallback.readFile(params);
+      return await fallback.readFile(_params);
     }
     throw new Error(this.lastError ?? "memory read unavailable");
   }
@@ -213,6 +233,54 @@ class FallbackMemoryManager implements MemorySearchManager {
     }
     this.cacheEvicted = true;
     this.onClose?.();
+  }
+}
+
+// Empire backend wrapper
+class EmpireMemoryManagerWrapper implements MemorySearchManager {
+  constructor(private readonly backend: import("./backends/interface.js").MemoryBackend) {}
+
+  async search(
+    query: string,
+    opts?: { maxResults?: number; minScore?: number; sessionKey?: string },
+  ): Promise<import("./types.js").MemorySearchResult[]> {
+    const results = await this.backend.search(query, {
+      maxResults: opts?.maxResults,
+      layers: ["knowledge", "daily", "tacit"],
+    });
+    return results.map((r) => ({
+      path: r.path,
+      startLine: 1,
+      endLine: r.content.split("\n").length,
+      score: r.score,
+      snippet: r.content.slice(0, 700), // Truncate for snippet
+      source: "memory" as const,
+      citation: r.path,
+    }));
+  }
+
+  async readFile(_params: { relPath: string; from?: number; lines?: number }): Promise<{ text: string; path: string }> {
+    // TODO: Implement file reading via backend
+    throw new Error("readFile not implemented for Empire backend");
+  }
+
+  status(): import("./types.js").MemoryProviderStatus {
+    return {
+      backend: "empire",
+      provider: "empire",
+    } as import("./types.js").MemoryProviderStatus;
+  }
+
+  async probeEmbeddingAvailability(): Promise<import("./types.js").MemoryEmbeddingProbeResult> {
+    return { ok: true };
+  }
+
+  async probeVectorAvailability(): Promise<boolean> {
+    return false; // Empire backend doesn't use vectors
+  }
+
+  async close(): Promise<void> {
+    // No-op for now
   }
 }
 

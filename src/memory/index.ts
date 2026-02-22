@@ -1,3 +1,6 @@
+// Import backends to register them
+import "./backends/index.js";
+
 export { MemoryIndexManager } from "./manager.js";
 export type {
   MemoryEmbeddingProbeResult,

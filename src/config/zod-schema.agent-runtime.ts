@@ -455,6 +455,21 @@ export const AgentToolsSchema = z
 export const MemorySearchSchema = z
   .object({
     enabled: z.boolean().optional(),
+    backend: z.union([z.literal("builtin"), z.literal("qmd"), z.literal("empire")]).optional(),
+    empire: z
+      .object({
+        layers: z
+          .object({
+            knowledge: z.string(),
+            daily: z.string(),
+            tacit: z.string(),
+          })
+          .strict()
+          .optional(),
+        license: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     sources: z.array(z.union([z.literal("memory"), z.literal("sessions")])).optional(),
     extraPaths: z.array(z.string()).optional(),
     experimental: z
